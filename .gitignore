@@ -1,0 +1,19 @@
+# 测试报告（产物，不入库）
+
+# Claude Code 运行时缓存（不含配置）
+.claude/cache/
+.claude/todos/
+
+# AI 规划工作目录（可选：如不想公开可加入）
+# .plans/
+
+# 测试报告（产物，不入库）
+test-reports/
+
+# 编辑器
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db

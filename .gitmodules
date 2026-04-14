@@ -1,0 +1,9 @@
+[submodule "casalyin-server"]
+	path = casalyin-server
+	url = https://github.com/Shenr1/casalyin-server.git
+[submodule "casalyin-java"]
+	path = casalyin-java
+	url = https://github.com/Shenr1/casalyin-java.git
+[submodule "casalyin-Headless"]
+	path = casalyin-Headless
+	url = https://github.com/Shenr1/casalyin-Headless.git

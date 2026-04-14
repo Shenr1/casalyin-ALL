@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /mnt/c/Users/12783/Desktop/casalyin)",
+      "Bash(find . -name \".git\" -maxdepth 3 -type d)",
+      "Read(//c/Users/12783/Desktop/casalyin//**)",
+      "Read(//c/Users/12783/Desktop/casalyin/**)",
+      "Bash(git -C /c/Users/12783/Desktop/casalyin/casalyin-server remote -v)",
+      "Bash(git -C /c/Users/12783/Desktop/casalyin/casalyin-java remote -v)",
+      "Bash(git -C /c/Users/12783/Desktop/casalyin/casalyin-Headless remote -v)",
+      "Bash(git add:*)"
+    ]
+  }
+}
