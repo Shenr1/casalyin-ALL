@@ -133,7 +133,66 @@ status=2（已拒绝）     → color="red"
 ## 详情页编辑
 
 - 进入详情页后可直接编辑，不需要单独的【编辑】按钮
-- 保存操作统一在 Header 右侧主操作区
+- **保存操作统一在底部 StickyFooterBar**（禁止在 Header 右上角放保存按钮）
+
+---
+
+## 底部操作栏：StickyFooterBar
+
+> 组件位置：`src/components/StickyFooterBar.tsx`  
+> 必须通过 `ContentDetailLayout` 的 `footerBar` prop 传入，不可单独放置。
+
+### 功能
+
+- **左侧**：显示「上次保存时间」（尚未保存 / 刚刚 / X 分钟前，每分钟自动刷新）
+- **右侧**：`[取消（可选）]` `[extraActions（可选，用于发布/提交审核）]` `[保存]`
+
+### Props
+
+```tsx
+interface StickyFooterBarProps {
+  lastSavedAt?: Date | null   // null = 从未保存
+  saving?: boolean            // 主按钮 loading 态
+  onSave?: () => void         // 保存回调（不传则不渲染保存按钮）
+  onCancel?: () => void       // 取消回调（不传则不渲染取消按钮）
+  extraActions?: ReactNode    // 「提交审核」「发布」等额外按钮（插在保存左侧）
+  saveText?: string           // 主按钮文案，默认 t('common.save')
+}
+```
+
+### 使用方式
+
+```tsx
+// 1. 在 Editor 组件内新增 state
+const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+
+// 2. 保存成功后更新时间
+setLastSavedAt(new Date())
+
+// 3. 构建 footerBar
+const footerBar = (
+  <StickyFooterBar
+    lastSavedAt={lastSavedAt}
+    saving={saving}
+    onSave={handleSave}
+    extraActions={
+      <Button type="primary" onClick={handlePublish}>发布</Button>
+    }
+  />
+)
+
+// 4. 传入 ContentDetailLayout
+<ContentDetailLayout footerBar={footerBar} ...>
+  {children}
+</ContentDetailLayout>
+```
+
+### 规范约束
+
+- 所有详情/编辑/新建页**必须**用 StickyFooterBar 承载保存操作
+- **禁止**在 Header 右上角放「保存」或「保存并发布」按钮
+- `lastSavedAt` 更新时机：保存 API 返回成功后，调用 `setLastSavedAt(new Date())`
+- i18n key：`common.neverSaved` / `common.lastSavedAt` / `common.justNow`（三语言已同步）
 
 ---
 

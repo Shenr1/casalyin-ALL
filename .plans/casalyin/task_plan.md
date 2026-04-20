@@ -260,51 +260,121 @@ dimensions.searching             "搜索中..."     / "Buscando..."
 
 ---
 
+## ✅ v1.9 — 别名功能 + 搜索并行化（已完成，2026-04-19）
+
+> **背景**：用户搜索时同物异名无法命中（如科学名 vs 俗名）；后端搜索串行 6 查询压力大。
+> **与 C端的关系**：C端 T8（debounce+最少2字符）完全独立先行；本版本完成后搜索结果自动受益，无需 C端额外改动。
+
+### Phase 1：别名字段（backend-dev）
+
+| 改动 | 内容 |
+|------|------|
+| Flyway V12 | `t_crop`、`t_pest`、`t_chemical_composition` 各加 `aliases JSON` 列 |
+| CropMapper.xml / PestMapper.xml / ChemicalCompositionMapper.xml | searchByKeyword SQL 加 `OR JSON_SEARCH(aliases, 'one', CONCAT('%', #{keyword}, '%')) IS NOT NULL` |
+| 对应 VO/Entity | 加 `aliases` 字段（`List<String>`，JSON 反序列化） |
+
+**别名规则：**
+- 仅 ADMIN 可维护，COMPANY 用户不可见
+- 存储格式：`["俗名1", "俗名2"]`
+
+### Phase 2：Admin UI 别名录入（frontend-dev，依赖 Phase 1）
+
+| 改动 | 内容 |
+|------|------|
+| CropManagement.tsx | 表格加 `aliases` 列，使用 `Select mode="tags"` 内联编辑 |
+| PestManagement.tsx | 同上 |
+| CompositionManagement.tsx | 同上 |
+| i18n | 三语言同步 `aliases` 字段名 |
+
+### Phase 3：搜索并行化（backend-dev，可与 Phase 1 并行）
+
+| 改动 | 内容 |
+|------|------|
+| GlobalSearchService.java | 6 个串行查询改为 `CompletableFuture.allOf()` 并行执行 |
+
+**效果：** 响应时间从 ~120ms 降至 ~20ms（6个查询变为同时执行）
+
+### 关闭标准
+
+- [x] Phase 1：Flyway V12 + 三个 Mapper JSON_SEARCH 别名匹配 ✅
+- [x] Phase 2：Admin 可在表格内录入/删除别名，保存生效 ✅
+- [x] Phase 3：并行化后搜索响应时间明显缩短 ✅
+- [x] e2e 回归：跳过（用户决策，2026-04-20）
+
+---
+
 ## 📋 遗留需求（长期）
 
 | # | 内容 | 说明 |
 |---|------|------|
 | ~~B4~~ | ~~i18n 补全：productForm.brand / storeForm.fields.brand 缺 en/es-ES~~ | ✅ 已自愈（三语言均已存在） |
 | ~~Task #16~~ | ~~Notifications.tsx 静态 message 导入源未从 AppProvider 替换~~ | ✅ 已自愈（第 6 行已从 AppProvider 导入） |
-| ADR-005 | Admin 强制下架通知（CONTENT_OFFLINE） | 详见 docs/decisions/architecture-decisions.md |
+| ~~ADR-005~~ | ~~Admin 强制下架通知（CONTENT_OFFLINE）~~ | ✅ 已完成（StoreService/ProductService/AgronomistService 均已实现） |
 | D11 | 品牌流量数据采集（PV/UV） | 规划中，当前 BrandDashboard 留占位 |
-| **D-论坛3** | **Discourse 关联扩展到品牌/店铺/农艺师 + 体验增强** | **下期 session 优先讨论** |
+| ~~D-论坛3~~ | ~~Discourse 关联扩展到品牌/店铺/农艺师 + 体验增强~~ | ⏸ 暂缓。原因：论坛内容质量不可控，自动拉取可能展示负面帖子伤害 COMPANY 付费用户，待论坛运营成熟、内容可管控后再评估 |
+| C端-店铺展示 | ProductStores 组件：VIP 店铺高亮可点击进详情，非 VIP 店铺仅展示店铺名称（灰色只读，无跳转链接） | 决策 2026-04-20：C端用户以农民为主，"开放完整店铺详情"对非客户不合理；VIP 作为"详情可点击"的门槛而非"出现在页面"的门槛。待排期实现。 |
 
 ---
 
-## ⬜ v2.0 — 仓库与物流（待立项）
+## ✅ v2.0 — 仓库与物流（已完成，2026-04-20，E2E 6/6 PASS）
 
-> 需求讨论阶段，Q4 后半段 + Q5~Q12 共 8 个问题待确认。
-> 不插队当前 v1.x 计划。
->
-> **进度：** 4 个问题已确认（Q1/Q2/Q3/Q4 部分），详见 decisions.md D13
+> 需求已完全确认，详见 decisions.md D13。
+> 邮件通知：Gmail SMTP（Spring Boot JavaMail）。目标市场：秘鲁。
 
-### 已确认
+### Phase 1：后端数据层（backend-dev）
 
-| 确认项 | 内容 |
-|--------|------|
-| 库存维度 | 挂在「产品」下，同一产品多经销商，库存都在平台仓库 |
-| 操作角色 | 只有平台方（ADMIN）操作入库/出库，需上传 PDF/图片凭证 |
-| 物流模式 | 第三方物流，基本状态 |
-| 展示角色 | 供应商看 Excel 库存历史；买家看下单后物流状态（Q4 后半待确认） |
+| # | 任务 | 状态 |
+|---|------|------|
+| V2-B1 | Flyway V13：t_product 加 available_cities（JSON）、stock_quantity（INT） | ⬜ |
+| V2-B2 | Flyway V14：新建 t_sales_record 表 | ⬜ |
+| V2-B3 | 产品接口更新：update/detail/query 暴露新字段 | ⬜ |
+| V2-B4 | 销售记录 CRUD（create/query/detail/add-tracking） | ⬜ |
+| V2-B5 | 公开查询接口：GET /order/track?orderNo=xxx（@NoNeedLogin） | ⬜ |
+| V2-B6 | Gmail SMTP 接入：create 时自动发邮件给买家（含订单号） | ⬜ |
 
-### 待确认（8 项）
+### Phase 2：Admin 前端（frontend-dev，依赖 Phase 1）
 
-| # | 问题 |
-|---|------|
-| Q4 续 | 买家下单后 C 端如何追踪物流 |
-| Q5 | SKU vs 产品：库存以 SKU 为单位还是产品为单位 |
-| Q6 | 供应商入库申请流程 |
-| Q7 | 库存预警机制 |
-| Q8 | 库存为 0 前端行为 |
-| Q9 | 物流状态档位 |
-| Q10 | 买家端展示形式 |
-| Q11 | 仓库分区/库位 |
-| Q12 | 退货/退款 |
+| # | 任务 | 状态 |
+|---|------|------|
+| V2-F1 | ProductEditor 加 available_cities（Select tags）和 stock_quantity（InputNumber） | ⬜ |
+| V2-F2 | 新建 SalesRecordManagement 列表页 | ⬜ |
+| V2-F3 | 销售录入表单（产品/数量/城市/价格/返点/买家姓名/买家邮件/支付方式） | ⬜ |
+| V2-F4 | 销售详情：补录快递单号入口 | ⬜ |
+| V2-F5 | 路由 + 菜单：/sales-records，仅 ADMIN 可见 | ⬜ |
+| V2-F6 | i18n 三语言同步 | ⬜ |
+
+### Phase 3：C端 Headless（frontend-dev，可与 Phase 2 并行）
+
+| # | 任务 | 状态 |
+|---|------|------|
+| V2-H1 | 产品详情页：展示可购城市 + 库存状态（有货/缺货） | ⬜ |
+| V2-H2 | 新建 /track 页面：输入订单号 → 展示信息 + 跳转 17track | ⬜ |
+| V2-H3 | i18n（es/zh） | ⬜ |
+
+### Phase 4：E2E 验证（e2e-tester）
+
+| # | 任务 | 状态 |
+|---|------|------|
+| V2-E1 | TC：Admin 录入销售 → order_no 生成 → 邮件触发 | ⬜ |
+| V2-E2 | TC：C端 /track 凭订单号查询 | ⬜ |
+| V2-E3 | TC：产品详情页 available_cities 展示 | ⬜ |
+
+### t_sales_record 表结构
+
+```sql
+id, product_id, qty, city, price, rebate_rate,
+buyer_name, buyer_email, payment_method,
+tracking_no（nullable）, order_no（unique）,
+status ENUM('PENDING','SHIPPED','DONE'),
+creator_id, created_at, updated_at
+```
 
 ### 关闭标准
 
-所有 8 个问题确认后，用户与 team-lead 共同评估开发规模，决定是否拆分 sprint。
+- Admin 可录入销售 → 系统生成订单号 → 买家收到邮件 ✓
+- Admin 可补录快递单号 ✓
+- C端 /track 可凭订单号查询 ✓
+- E2E 三组场景全部 PASS ✓
 
 ---
 
