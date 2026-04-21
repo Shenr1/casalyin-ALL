@@ -325,39 +325,39 @@ dimensions.searching             "搜索中..."     / "Buscando..."
 
 | # | 任务 | 状态 |
 |---|------|------|
-| V2-B1 | Flyway V13：t_product 加 available_cities（JSON）、stock_quantity（INT） | ⬜ |
-| V2-B2 | Flyway V14：新建 t_sales_record 表 | ⬜ |
-| V2-B3 | 产品接口更新：update/detail/query 暴露新字段 | ⬜ |
-| V2-B4 | 销售记录 CRUD（create/query/detail/add-tracking） | ⬜ |
-| V2-B5 | 公开查询接口：GET /order/track?orderNo=xxx（@NoNeedLogin） | ⬜ |
-| V2-B6 | Gmail SMTP 接入：create 时自动发邮件给买家（含订单号） | ⬜ |
+| V2-B1 | Flyway V13：t_product 加 available_cities（JSON）、stock_quantity（INT） | ✅ |
+| V2-B2 | Flyway V14：新建 t_sales_record 表 | ✅ |
+| V2-B3 | 产品接口更新：update/detail/query 暴露新字段 | ✅ |
+| V2-B4 | 销售记录 CRUD（create/query/detail/add-tracking） | ✅ |
+| V2-B5 | 公开查询接口：GET /order/track?orderNo=xxx（@NoNeedLogin） | ✅ |
+| V2-B6 | Gmail SMTP 接入：create 时自动发邮件给买家（含订单号） | ✅ |
 
 ### Phase 2：Admin 前端（frontend-dev，依赖 Phase 1）
 
 | # | 任务 | 状态 |
 |---|------|------|
-| V2-F1 | ProductEditor 加 available_cities（Select tags）和 stock_quantity（InputNumber） | ⬜ |
-| V2-F2 | 新建 SalesRecordManagement 列表页 | ⬜ |
-| V2-F3 | 销售录入表单（产品/数量/城市/价格/返点/买家姓名/买家邮件/支付方式） | ⬜ |
-| V2-F4 | 销售详情：补录快递单号入口 | ⬜ |
-| V2-F5 | 路由 + 菜单：/sales-records，仅 ADMIN 可见 | ⬜ |
-| V2-F6 | i18n 三语言同步 | ⬜ |
+| V2-F1 | ProductEditor 加 available_cities（Select tags）和 stock_quantity（InputNumber） | ✅ |
+| V2-F2 | 新建 SalesRecordManagement 列表页 | ✅ |
+| V2-F3 | 销售录入表单（产品/数量/城市/价格/返点/买家姓名/买家邮件/支付方式） | ✅ |
+| V2-F4 | 销售详情：补录快递单号入口 | ✅ |
+| V2-F5 | 路由 + 菜单：/sales-records，仅 ADMIN 可见 | ✅ |
+| V2-F6 | i18n 三语言同步 | ✅ |
 
 ### Phase 3：C端 Headless（frontend-dev，可与 Phase 2 并行）
 
 | # | 任务 | 状态 |
 |---|------|------|
-| V2-H1 | 产品详情页：展示可购城市 + 库存状态（有货/缺货） | ⬜ |
-| V2-H2 | 新建 /track 页面：输入订单号 → 展示信息 + 跳转 17track | ⬜ |
-| V2-H3 | i18n（es/zh） | ⬜ |
+| V2-H1 | 产品详情页：展示可购城市 + 库存状态（有货/缺货） | ✅ |
+| V2-H2 | 新建 /track 页面：输入订单号 → 展示信息 + 跳转 17track | ✅ |
+| V2-H3 | i18n（es/zh） | ✅ |
 
 ### Phase 4：E2E 验证（e2e-tester）
 
 | # | 任务 | 状态 |
 |---|------|------|
-| V2-E1 | TC：Admin 录入销售 → order_no 生成 → 邮件触发 | ⬜ |
-| V2-E2 | TC：C端 /track 凭订单号查询 | ⬜ |
-| V2-E3 | TC：产品详情页 available_cities 展示 | ⬜ |
+| V2-E1 | TC：Admin 录入销售 → order_no 生成 → 邮件触发 | ✅ |
+| V2-E2 | TC：C端 /track 凭订单号查询 | ✅ |
+| V2-E3 | TC：产品详情页 available_cities 展示 | ✅ |
 
 ### t_sales_record 表结构
 
@@ -375,6 +375,49 @@ creator_id, created_at, updated_at
 - Admin 可补录快递单号 ✓
 - C端 /track 可凭订单号查询 ✓
 - E2E 三组场景全部 PASS ✓
+
+---
+
+---
+
+## ✅ v2.0.1 — 产品 Tag UX 重构 + 批量保存性能修复（已完成，2026-04-21，E2E 4/4 PASS）
+
+### 背景
+- Bug A：`t_tag_category.is_required`/`is_multiple` 列存在于 DB，但 Java 后端 Entity/VO/Mapper 从未读取，导致前端 isRequired/isMultiple 逻辑静默失效
+- Bug B：ProductEditor detail 模式 `isEditMode` 永远为 true，tag 只读展示失效
+- 性能问题：4 个管理页（TagCategory / Composition / Crop / Pest）batch-upsert 全量提交导致超时
+
+### 任务清单
+
+| # | 任务 | 负责 | 状态 |
+|---|------|------|------|
+| T1 | 后端打通 is_required/is_multiple（Entity/VO/Form/Mapper/Service） | backend-dev | ✅ reviewer [OK] |
+| T2 | ProductForm.tsx 重构：两步式→单层展开（Radio/Checkbox 按 isMultiple 动态切换） | frontend-dev | ✅ reviewer [WARN→OK] |
+| T3 | TagCategoryManagement.tsx 加 isRequired/isMultiple 编辑列 | frontend-dev | ✅ 完成 |
+| T4 | 修复 BUG-TAG-002：ProductEditor detail 模式 isEditMode 改为 `mode !== 'detail'` | frontend-dev | ✅ e2e 验证通过 |
+| T5 | 4 个管理页 batch-upsert 只提交有变更行（TagCategory/Composition/Crop/Pest） | frontend-dev | ✅ 完成 |
+| T6 | E2E 回归：TC-TAG-001~004 + 批量保存 smoke test | e2e-tester | ✅ 4/4 PASS |
+
+### 关闭标准
+- TC-TAG-001（创建，Card 展开/Radio 单选/isRequired 红 *）✅ PASS
+- TC-TAG-002（编辑回填）✅ PASS
+- TC-TAG-003（详情只读 tag 格式）✅ PASS
+- TC-TAG-004（必填分类未选报错）✅ PASS
+- 4个管理页保存响应时间 <2s ✅ PASS（1783ms）
+
+---
+
+## 📋 v2.1 — 地图集成（待启动，需 Google Maps API Key）
+
+> 前置条件：用户提供 Google Maps API Key，需开启 Maps JavaScript API + Places API。
+> 目标市场：秘鲁，所有地址选择器默认限定 `componentRestrictions: { country: 'pe' }`。
+
+| 维度 | 精度 | 改动内容 |
+|------|------|---------|
+| 店铺 | 精确到点（lat/lng） | Flyway V16：`t_store`/`t_store_draft` 加 `latitude DECIMAL(10,8)` + `longitude DECIMAL(11,8)`；后端 VO/Form 更新；前端 StoreEditor 地图选点（反向地理编码自动填 state/city/street）；C端店铺详情页嵌入地图展示 |
+| 农艺师 | 精确到市 | Flyway V16（或 V17）：`t_agronomist`/`t_agronomist_draft` 加 `city VARCHAR(100)`；后端 VO/Form 更新；AgronomistEditor 城市 autocomplete 单选 |
+| 产品 `available_cities` | 精确到市（多选） | 现有 `<Select mode="tags">` 替换为 Google Places 城市 autocomplete 多选 |
+| 销售记录 | 暂缓 | 不在本版本范围 |
 
 ---
 

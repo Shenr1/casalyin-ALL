@@ -31,3 +31,23 @@
 - 新增 brandDashboard.productList.* 和 brandDashboard.trafficData.* 共 12 个 key
 
 TypeScript 编译无错误。
+
+## 2026-04-14 Session — v1.3 reviewer 问题修复确认
+
+**任务**：task #1（v1.3 前端 BrandDashboard + reviewer 问题修复）
+
+确认上一次 commit（228a3dd, 2026-04-13）已包含所有 reviewer 指出的修复：
+- MEDIUM-1：接口路径 `/brand/my-products` 与后端 Controller 一致 ✅
+- MEDIUM-2：productsError 状态 + Table locale.emptyText 显示错误提示 ✅
+- MEDIUM-3：ADMIN 父节点虚拟路径 `/brands/_group` ✅
+- LOW-1：移除 `|| '刷新'` 硬编码兜底，common.refresh 三语言均存在 ✅
+
+TypeScript 编译通过（0 错误）。
+已更新 findings.md，向 reviewer 发起二次审查请求。
+
+## 2026-04-14 阻塞记录
+
+e2e-tester 发现 HIGH Bug TC-P3-001：ADMIN「认证申请」子菜单不显示。
+根因：后端 ADMIN 角色缺少 `brand:apply:audit` 权限码（非前端问题）。
+决策：方案 A，backend-dev 补充权限码，前端 routes.tsx:53 不动。
+**前端无需操作，等待 backend-dev 修复后 e2e 回归结果。**

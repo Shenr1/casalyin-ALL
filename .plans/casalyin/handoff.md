@@ -1,80 +1,93 @@
-# 交接文档 — 2026-04-13
+# 交接文档 — 2026-04-14（v1.5 D-论坛2 代码完成）
 
-> 用途：/clear 后恢复团队状态用
-
----
-
-## 当前遗留 Bug（需立即处理）
-
-### Bug 13：POST /brand/apply/submit 返回系统错误
-- **严重度**：HIGH
-- **现象**：前端表单提交正常，后端返回 `{code:10001, msg:"系统似乎出现了点小问题"}`
-- **接口**：`POST /brand/apply/submit`
-- **Service**：`BrandApplyService.submitApply()`（约第84行）
-- **排查方向**：
-  1. `(RequestUser) SmartRequestUtil.getRequestUser()` 强转是否安全
-  2. `brandApplyDao.insert(entity)` 字段与 DB 列是否匹配
-  3. MyBatis Plus 自动填充与手动 `setCreateTime()` 是否冲突
-  4. **最需要的**：看 IntelliJ 后端控制台实际异常堆栈
-
-### Bug 14：POST /product/sync-creator 返回系统错误
-- **严重度**：HIGH
-- **现象**：HTTP 200 但 `{code:10001}`，不再是 403（Bug 12 权限码已修复验证通过）
-- **接口**：`POST /product/sync-creator`
-- **Service**：`ProductService.syncCreatorToBrandUser()`（约第941行）
-- **排查方向**：
-  1. `productDao.updateOwnerUserIdByBrandId()` SQL 是否正确
-  2. 测试 COMPANY 账号（123123@qq.com）是否有 status=1 的 brand_apply 记录
-  3. **最需要的**：看 IntelliJ 后端控制台实际异常堆栈
+> 用途：/compact 或 session 重启后恢复状态用
 
 ---
 
-## B3 测试结果概览（e2e 8/10 PASS）
+## 当前版本状态
 
-| 测试项 | 结果 |
-|--------|------|
-| T1 AgronomistManagement 白屏修复 | ✅ 3/3 PASS |
-| T2 /brands/apply-my 用户申请页 | ⚠️ 2/3（Bug 13 导致提交失败） |
-| T3 品牌申请管理端（Admin） | ✅ 3/3 PASS（无数据，部分跳过） |
-| T4 /product/sync-creator 同步产品 | ❌ FAIL（Bug 14） |
-
-**Bug 13 修复后**：T2 需回归（提交申请全流程）
-**Bug 14 修复后**：T4 需回归（同步产品功能）
-**T3 管理端**：需在 T2 修复后补充有数据的审核场景回归
-
----
-
-## 已完成工作汇总（本轮）
-
-| 任务 | 状态 |
+| 版本 | 状态 |
 |------|------|
-| B1 产品敏感词检测 | ✅ 确认已存在，无需改动 |
-| B2 RoleUtils 工具类 | ✅ 完成 |
-| B3-1 后端接口梳理 | ✅ 完成 |
-| B3-2 BrandApplyManagement/Detail 规范修复 | ✅ reviewer [OK] |
-| B3-3 /brands/apply-my 用户申请入口页 | ✅ reviewer [OK] |
-| B-品牌3 同步产品归属 | ✅ 完成 |
-| Bug 12 product:edit 权限码 | ✅ 修复并验证（不再 403） |
-| 白屏热修复（AgronomistManagement） | ✅ 修复并验证 |
-| BrandApplyController 路径参数 {id} | ✅ 修复 |
-| ProductController 路径参数 {id} | ✅ 修复 |
+| v1.0 ~ v1.4.1 | ✅ 全部完成 |
+| 规范清理：全站 19 个文件静态 message 导入 | ✅ 完成，tsc 零错误，reviewer [OK] |
+| v1.5 D-论坛2：代码实现 | ✅ 后端 + Headless 前端均完成 |
+| v1.5 D-论坛2：E2E 验证 | ⏳ 待完成（后端 Rebuild 后验证） |
 
 ---
 
-## Backlog 剩余（未开始）
+## ⚠️ 下次 session 第一件事
 
-| # | 内容 | 优先级 |
-|---|------|--------|
-| B4 | i18n 补全：productForm.brand / storeForm.fields.brand 缺 en/es-ES | 低 |
-| D-论坛1 | Discourse 关联第一期（后台 discourse_tag 字段） | 待排期 |
-| D-论坛2 | Discourse 关联第二期（Headless 前台展示） | 待排期 |
+**后端需要 Rebuild Project**（IntelliJ → Build → Rebuild Project）再启动，否则有编译缓存问题（STORE_LOCKED 找不到）。代码本身没有 bug，纯缓存问题。
 
-详细 Discourse 计划见：`.plans/casalyin/discourse-integration/plan.md`
+重启后 e2e-tester 跑：
+- TC-151-1：有 discourse_tag 产品 → `GET /product/discourse-posts/{id}` 返回帖子列表
+- TC-151-2：无 discourse_tag 产品 → 返回 []
+- TC-151-3：不存在产品 ID → 返回 []
+
+---
+
+## v1.5 D-论坛2 改动文件清单
+
+### 后端（casalyin-java）
+| 文件 | 说明 |
+|------|------|
+| `product/domain/vo/DiscoursePostVO.java`（新） | 帖子 VO（id/title/slug/createdAt/replyCount/views） |
+| `product/service/DiscourseService.java`（新） | 调 `community.casalyin.com` Discourse API，异常返回空列表 |
+| `product/controller/ProductController.java` | 新增 `@NoNeedLogin GET /product/discourse-posts/{id}` |
+| `product/service/ProductService.java` | 新增 `getDiscoursePosts(Long productId)` |
+
+### Headless（casalyin-Headless）
+| 文件 | 说明 |
+|------|------|
+| `app/api/product/discourse-posts/[productId]/route.ts`（新） | Route Handler，代理到后端 |
+| `lib/discourse-api.ts`（新） | `getProductDiscussions(productId)`，失败返回 [] |
+| `components/product-detail/ProductForumLinks.tsx` | 改为真实数据，新增 loading/空状态/回复数/浏览数 |
+| `app/productos/[slug]/page.tsx` | 传 `productId` 给 ProductForumLinks |
+| `lib/i18n/translations/es.json` | 新增 `product.forum.*` 6 个 key |
+| `lib/i18n/translations/zh.json` | 新增 `product.forum.*` 6 个 key |
+| `lib/i18n/index.ts` | 新增 TranslationKey 类型声明 |
+
+---
+
+## 下一步候选方向
+
+| 优先级 | 内容 |
+|--------|------|
+| 最高 | 完成 v1.5 E2E：Rebuild 后端 → e2e-tester 验证 TC-151-1/2/3 |
+| 高 | 招募 headless-dev + headless-tester，做 C 端 API 健康检查 |
+| 待定 | v1.5 D-论坛3：扩展到品牌/店铺/农艺师 + 体验增强 |
+| 待定 | v2.0 仓储物流：先对齐 D13 的 5 个问题再立项 |
+
+---
+
+## 团队规划（已决策）
+
+现有团队 `casalyin-20260414` 新增两个专职角色：
+
+| 角色 | 职责 |
+|------|------|
+| `headless-dev` | 专职 Next.js Headless 开发（不碰 casalyin-server） |
+| `headless-tester` | 专职 C 端 Playwright 测试，首要任务：C 端 API 健康检查 |
+
+backend-dev / reviewer 两个角色继续共享。
 
 ---
 
 ## 重启团队后第一步
 
-1. 读本文件恢复状态
-2. 让 backend-dev 查 IntelliJ 控制台日志修复 Bug 13 和 Bug 14
-3. Bug 修复后通知 e2e-tester 回归 T2 和 T4
+1. 读 `current-team.txt` 拿团队名（casalyin-20260414）
+2. SendMessage 尝试唤醒已有 agent
+3. 读本文件 + task_plan.md 确认当前进度
+4. Rebuild 后端 → e2e-tester 验证 v1.5
+
+---
+
+## 技术栈快速参考
+
+- 后端端口：8690（dev profile）
+- Flyway 最新版本：V9（discourse_tag）
+- Discourse 论坛：https://community.casalyin.com
+- Headless：Next.js 14 App Router + Tailwind CSS + TypeScript
+- Headless API 模式：lib/*-api.ts → app/api/**/route.ts → 后端
+- 通知类型：CONTENT_NOTICE / AUDIT_APPROVED / AUDIT_REJECTED / CONTENT_OFFLINE
+- 认证资源类型：PRODUCT / STORE / AGRONOMIST / BRAND
