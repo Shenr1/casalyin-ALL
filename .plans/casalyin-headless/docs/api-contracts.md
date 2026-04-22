@@ -46,3 +46,48 @@
 ### 化学成分（ingredientes）
 
 > TODO: 由 frontend-dev 开发时补充
+
+### 店铺（tiendas）
+
+#### 获取店铺详情
+
+```
+GET /store/detail/{id}
+```
+
+响应 `data` 字段类型：
+
+```typescript
+interface StoreDetailVO {
+  storeId: number
+  storeName: string
+  state: string
+  city: string
+  street: string
+  info: string
+  disabledFlag: boolean
+  statusFlag: number
+  statusFlagName: string
+  hasPendingDraft: boolean
+  draftId: number
+  draftStatus: number
+  draftStatusName: string
+  displayStatus: number
+  displayStatusName: string
+  contacts: Contact[]       // [{name?, email?, phone?}]
+  vipLevel?: number
+  vipLevelName?: string
+  latitude?: number | null
+  longitude?: number | null
+  updateTime: string
+  createTime: string
+}
+
+interface Contact {
+  name?: string
+  email?: string
+  phone?: string
+}
+```
+
+前台使用：`lib/store-detail-api.ts` → `getStoreDetail(storeId)`

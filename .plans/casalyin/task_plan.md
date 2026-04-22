@@ -407,17 +407,39 @@ creator_id, created_at, updated_at
 
 ---
 
-## 📋 v2.1 — 地图集成（待启动，需 Google Maps API Key）
+## ✅ v2.1 — 地图集成（已完成，2026-04-22，E2E 3/3 PASS）
 
-> 前置条件：用户提供 Google Maps API Key，需开启 Maps JavaScript API + Places API。
-> 目标市场：秘鲁，所有地址选择器默认限定 `componentRestrictions: { country: 'pe' }`。
+> Google Maps API Key 已配置，全球城市支持（无国家限制）。
+> 设计方向：纯文本 Places Autocomplete（无地图渲染），地址/城市均通过搜索建议选择。
 
-| 维度 | 精度 | 改动内容 |
-|------|------|---------|
-| 店铺 | 精确到点（lat/lng） | Flyway V16：`t_store`/`t_store_draft` 加 `latitude DECIMAL(10,8)` + `longitude DECIMAL(11,8)`；后端 VO/Form 更新；前端 StoreEditor 地图选点（反向地理编码自动填 state/city/street）；C端店铺详情页嵌入地图展示 |
-| 农艺师 | 精确到市 | Flyway V16（或 V17）：`t_agronomist`/`t_agronomist_draft` 加 `city VARCHAR(100)`；后端 VO/Form 更新；AgronomistEditor 城市 autocomplete 单选 |
-| 产品 `available_cities` | 精确到市（多选） | 现有 `<Select mode="tags">` 替换为 Google Places 城市 autocomplete 多选 |
-| 销售记录 | 暂缓 | 不在本版本范围 |
+| 维度 | 精度 | 改动内容 | 状态 |
+|------|------|---------|------|
+| 店铺 | 精确到点（lat/lng） | Flyway V16 + StoreDraftVO 加 latitude/longitude；StoreEditor 地址搜索框（PlacesAddressAutocomplete）自动填 state/city/street；C端店铺详情弹窗展示 Google Maps iframe + 外链 | ✅ |
+| 农艺师 | 精确到市 | Flyway V16 + AgronomistDraftVO 加 city；AgronomistEditor 城市 autocomplete 单选（PlacesCityAutocomplete） | ✅ |
+| 产品 `available_cities` | 精确到市（多选） | ProductForm `<Select mode="tags">` 替换为 PlacesCityAutocomplete（多选 Tags） | ✅ |
+| 销售记录 | 暂缓 | 不在本版本范围 | ⏸ |
+
+**E2E（`casalyin-server/e2e/v2.1/map-integration.spec.ts`）：** TC-MAP-001~003 全部 PASS（3/3，46.4s）
+
+**新增组件：** `PlacesAddressAutocomplete.tsx`、`PlacesCityAutocomplete.tsx`（Ant Design Select + debounce 300ms + Tag 展示）
+
+**删除：** `GoogleMapPicker.tsx`（UX 评估后放弃地图渲染方式）
+
+---
+
+## ✅ v2.2 — C端 VIP 店铺详情页（已完成，2026-04-22，E2E 3/3 PASS）
+
+| 任务 | 内容 | 状态 |
+|------|------|------|
+| 新建 `/tiendas/[id]` 详情页 | Client Component，展示地址/地图/店铺信息/联系方式，VipBadge | ✅ |
+| ProductStores.tsx 弹窗加「查看完整详情」Link | 跳转 `/tiendas/{storeId}` | ✅ |
+| productos/[slug] 内联弹窗同步 | 同上 + 7处 i18n 修复 | ✅ |
+| lib/sanitize.ts | DOMPurify 共享净化函数，替换手写正则 | ✅ |
+| i18n store.viewDetails | zh/es/index.ts 三文件同步 | ✅ |
+| StoreMapper.xml Bug 修复 | vip_level_value → vip_level（3处），VIP 字段映射修复 | ✅ |
+| api-contracts.md 补充 | GET /api/store/detail/{id} + StoreDetailVO 字段定义 | ✅ |
+
+**E2E（`casalyin-server/e2e/v2.1/store-detail.spec.ts`）：** TC-T9-1~3 全部 PASS（3/3）
 
 ---
 
