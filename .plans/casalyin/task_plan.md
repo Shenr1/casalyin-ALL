@@ -441,6 +441,15 @@ creator_id, created_at, updated_at
 
 **E2E（`casalyin-server/e2e/v2.1/store-detail.spec.ts`）：** TC-T9-1~3 全部 PASS（3/3）
 
+## ✅ v2.3 — 农艺师 VIP 过滤（已完成，2026-04-22）
+
+| 任务 | 内容 | 状态 |
+|------|------|------|
+| 后端 vipOnly 参数落地 | AgronomistPublicController 4个接口加 `vipOnly` 参数；AgronomistService 透传；AgronomistMapper.xml `listByIdsAndStatus` 加 VIP INNER JOIN 条件 | ✅ |
+| C端 vipOnly 透传 | `agronomist-api.ts` 实际传 `vipOnly=true`；Next.js BFF 路由透传 query params | ✅ |
+| 作物/病虫害详情页 | 农艺师列表传 `{ vipOnly: true }`；无专家时展示 `t('pages.detail.noExperts')` | ✅ |
+| BUG-1 修复 | `SubscriptionBatchAddParams.userId` → `ownerUserId`（前后端字段名不一致） | ✅ |
+
 ---
 
 ## 已归档任务文件夹
