@@ -151,20 +151,44 @@ ECS 自动部署
 
 **所有服务均可由 agent 通过 Bash 工具启动，无需用户手动操作。**
 
-### 服务启动命令
+**完整启动指南：** `docs/development/startup-guide.md`
+
+### 服务启动命令（标准）
 
 | 服务 | 端口 | 启动命令 | 等待时间 |
 |------|------|---------|---------|
-| 后端 Spring Boot | 8690 | `powershell.exe -File "casalyin-java/scripts/dev-admin.ps1"` | ~30 秒 |
+| 后端 Spring Boot | 8690 | `cd casalyin-java && npm run dev` | ~30-40 秒 |
 | 后台前端 Vite | 5173 | `cd casalyin-server && npm run dev` | ~5 秒 |
 | C端前台 Next.js | 3000 | `cd casalyin-Headless && npm run dev` | ~10 秒 |
 
 **启动均使用 `run_in_background: true`，启动后等待对应时间再继续操作。**
 
+### 重启服务
+
+```bash
+# 后端重启（停止 + 重新启动）
+cd casalyin-java && npm run dev:stop && npm run dev
+
+# 前端重启（先停止占用端口的进程）
+netstat -ano | grep :5173 | awk '{print $5}' | xargs taskkill //PID //F
+cd casalyin-server && npm run dev
+```
+
+### 强制重新编译（后端）
+
+当修改了 Java 代码但服务没有生效时：
+
+```bash
+cd casalyin-java
+rm -rf casalyin-admin/target    # 删除编译缓存
+npm run dev                      # 重新编译并启动
+```
+
 ### 后端约束
 
 - JDK 17 必须在 `C:\Program Files\Eclipse Adoptium\jdk-17.0.17.10-hotspot`，脚本写死此路径
 - 启动后 ADMIN 需重新登录刷新权限缓存（Flyway 变更后必须）
+- 后端使用 Maven Wrapper (`mvnw.cmd`)，无需安装 Maven
 
 ### Redis 缓存问题
 
