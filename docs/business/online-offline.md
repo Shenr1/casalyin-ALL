@@ -1,29 +1,31 @@
 # 上下架规范
 
 > 来源：business_online_offline.md + online-offline-unification-plan.md
-> 最后更新：2026-04-24
+> 最后更新：2026-04-30
 
 ---
 
 ## 业务语义
 
-- **下架 = 移入草稿表**：下架的产品会从主表（`t_product`）移到草稿表（`t_product_draft`），不再展示
-- **上架 = 发布到主表**：草稿审核通过后写入主表（`t_product`），`status = 1`（上架）
+- **下架**：设置 `disabledFlag = true`，产品仍在主表中，但前台不显示
+- **上架**：设置 `disabledFlag = false`，产品在主表中且前台可见
 - 品牌维度：**无上下架功能**（品牌是用户身份标识，不是内容）
 
 ### 数据存储规则
 
 | 状态 | 存储位置 | 表字段 | 说明 |
 |------|---------|--------|------|
-| 已发布（上架） | 主表 `t_product` | `status = 1` | 已发布且上架的产品 |
+| 已发布（上架） | 主表 `t_product` | `status = 1, disabledFlag = false` | 已发布且上架的产品 |
+| 已发布（下架） | 主表 `t_product` | `status = 1, disabledFlag = true` | 已发布但下架的产品 |
 | 未发布（草稿） | 草稿表 `t_product_draft` | `draftStatus = 0` | 草稿，已保存未提交 |
 | 未发布（待审核） | 草稿表 `t_product_draft` | `draftStatus = 1` | 待审核，已提交等待 admin 操作 |
 | 未发布（已拒绝） | 草稿表 `t_product_draft` | `draftStatus = 2` | 已拒绝，可继续修改再提交 |
 
 **关键规则：**
-- 主表只保留上架的产品（`status = 1`）
-- 下架的产品会移到草稿表，不保留在主表
-- 列表页"已发布"tab 显示主表数据，"未发布"tab 显示草稿表数据
+- 主表保留所有已发布的产品（`status = 1`），包括上架和下架的
+- 下架操作只设置 `disabledFlag = true`，不移动到草稿表，不删除主表记录
+- 列表页"已发布"tab 显示主表数据（包括上架和下架的），"未发布"tab 显示草稿表数据
+- 前端查询时传递 `includeDisabled: true` 可以查询所有已发布的产品（包括下架的）
 
 ---
 
