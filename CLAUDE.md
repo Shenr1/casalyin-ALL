@@ -6,6 +6,27 @@
 
 ---
 
+## 开发流程与职责分工
+
+### Claude CLI Team（本地开发）
+- 功能开发（前端 + 后端代码）
+- 本地服务启动/重启/调试
+- 本地测试和验证（单元测试 + E2E 测试）
+- 代码 commit（但不 push）
+- 完成后告知用户，由用户决定是否发版
+
+### Hermes（运维 + 发版）
+- Git push 和版本发布
+- 生产环境部署和问题排查
+- 服务器资源监控和容器管理
+- CI/CD 问题修复
+- 数据库运维（生产环境）
+- 环境变量和密钥配置（生产环境与本地可能不同）
+
+**关键原则：本地操作由 Claude Team 执行，服务器操作由 Hermes 执行。**
+
+---
+
 ## 文档职责分工
 
 **规则：CLAUDE.md 只写规范，不写任务。任务、Bug、待确认问题一律写到对应专属文件。**
@@ -128,7 +149,7 @@ POST   /{resource}/offline/{id}    # 下架（POST，禁止 PUT）
 
 ## 版本发布协议
 
-**用户不手动 push。所有 push 由 team-lead 执行，流程如下：**
+**用户不手动 push。所有 push 由 Hermes 执行，流程如下：**
 
 ```
 功能完成 → reviewer [OK] + E2E 通过
@@ -137,19 +158,50 @@ team-lead 向用户汇总本版本内容，请求确认
     ↓
 用户确认
     ↓
-team-lead 执行：git add → git commit → git push origin main
+team-lead 执行：git add → git commit（不要 push）
     ↓
-ECS 自动部署
+更新任务状态为 DONE（如果是通过 .hermes-tasks/ 交接的任务）
+    ↓
+Hermes 验证 → git push origin develop → 本地测试
+    ↓
+测试通过 → Hermes merge develop 到 main → ECS 自动部署
 ```
+
+**重要**：
+- team-lead 只负责 commit，不要 push
+- push 统一由 Hermes 在验证通过后执行
+- 如果不是通过 .hermes-tasks/ 交接的任务，完成后告诉用户，由用户决定是否 push
+- **新规则**：所有开发在 develop 分支进行，测试通过后才 merge 到 main
+- **main 分支 = 生产环境**，任何 push 到 main 都会触发自动部署
 
 **Commit message 格式：** `feat: v{版本号} {简短描述}`
 例：`feat: v1.3 brand dashboard + product list`
+
+## Git 分支管理
+
+**当前稳定版本：v1.0.0-stable**
+
+### 分支策略
+
+- **main**：生产环境分支，只接受来自 develop 的 merge，每次 push 自动部署
+- **develop**：开发主分支，日常开发在此进行
+- **feature/xxx**：功能开发分支，从 develop 创建，完成后 merge 回 develop
+- **hotfix/xxx**：紧急修复分支，从 main 创建，修复后 merge 回 main 和 develop
+
+### 工作流程
+
+1. **日常开发**：在 develop 分支或 feature 分支开发
+2. **功能完成**：merge 到 develop，运行 E2E 测试
+3. **准备发版**：develop 稳定后 merge 到 main，打 tag
+4. **生产部署**：push main 分支，自动触发部署
+
+**详细规范见：** `docs/git-workflow.md`
 
 ---
 
 ## 本地开发环境操作
 
-**所有服务均可由 agent 通过 Bash 工具启动，无需用户手动操作。**
+**所有本地服务的启动、重启、调试均由 Claude CLI Team 在本地执行，Hermes 不参与本地服务操作。**
 
 **完整启动指南：** `docs/development/startup-guide.md`
 

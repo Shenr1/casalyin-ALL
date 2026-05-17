@@ -17,3 +17,24 @@ test-reports/
 # OS
 .DS_Store
 Thumbs.db
+
+# 本地密钥备份（绝不入库）
+.secrets
+.secrets.*
+
+# 本地运行时文件（不入库）
+.claude/settings.local.json
+.hermes-tasks/watch.log
+
+# 本地临时脚本和测试文件（不入库）
+dev-start.sh
+dev-stop.sh
+dev-check.sh
+test-docker-compose.sh
+test-docker-compose-full.sh
+test-docker-config.sh
+upload/
+scripts/
+data-import-templates/
+DEV-TOOLS-README.md
+LOCAL_TEST_GUIDE.md
