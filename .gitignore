@@ -25,6 +25,7 @@ Thumbs.db
 # 本地运行时文件（不入库）
 .claude/settings.local.json
 .hermes-tasks/watch.log
+.hermes/
 
 # 本地临时脚本和测试文件（不入库）
 dev-start.sh
