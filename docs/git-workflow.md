@@ -1,5 +1,20 @@
 # Git 分支管理规范
 
+> **⚠️ 本文档内容已过时，不再执行（2026-08-22）。**
+>
+> 当前阶段为单人开发、生产环境未对外开放，直接在 `main` 分支开发并 push
+> （主仓库 casalyin-ALL 为 `master`）。不使用 develop / feature / hotfix 分支。
+>
+> **现行规范见 `CLAUDE.md` 的「Git 提交与发布」章节。**
+>
+> 实际情况补充：`casalyin-java` 和主仓库 `casalyin-ALL` 从未创建 develop 分支，
+> 只有 `casalyin-server` 和 `casalyin-Headless` 有（且长期落后于 main），
+> 因此下述流程从未完整落地过。仓库当前也没有任何 tag。
+>
+> 本文档保留作为历史记录，等生产正式对外开放、需要重新引入发版评审流程时参考。
+
+---
+
 ## 版本封存
 
 **当前稳定版本：v1.0.0-stable**

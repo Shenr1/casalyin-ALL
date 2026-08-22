@@ -6,24 +6,17 @@
 
 ---
 
-## 开发流程与职责分工
+## 开发流程
 
-### Claude CLI Team（本地开发）
-- 功能开发（前端 + 后端代码）
-- 本地服务启动/重启/调试
-- 本地测试和验证（单元测试 + E2E 测试）
-- 代码 commit（但不 push）
-- 完成后告知用户，由用户决定是否发版
+**当前阶段：单人开发，生产环境未对外开放。**
 
-### Hermes（运维 + 发版）
-- Git push 和版本发布
-- 生产环境部署和问题排查
-- 服务器资源监控和容器管理
-- CI/CD 问题修复
-- 数据库运维（生产环境）
-- 环境变量和密钥配置（生产环境与本地可能不同）
+- 功能开发、本地服务启动/调试、测试验证、commit、push 全部在本地完成
+- 直接在 `main` 分支开发并 push（主仓库 casalyin-ALL 为 `master`）
+- push 后 CI/CD 自动部署到生产环境，因生产未开放，无影响面
 
-**关键原则：本地操作由 Claude Team 执行，服务器操作由 Hermes 执行。**
+生产环境排查、服务器监控、生产库运维、生产密钥配置由 Hermes 负责（本地一律自己来）。
+
+> 等生产正式对外开放后，再重新引入 develop 分支与发版评审流程。
 
 ---
 
@@ -33,7 +26,7 @@
 
 | 文档 | 存放内容 |
 |------|---------|
-| `CLAUDE.md` | 项目规范、约定、禁忌、Known Pitfalls、团队运营协议 |
+| `CLAUDE.md` | 项目规范、约定、禁忌、Known Pitfalls |
 | `.plans/*/task_plan.md` | 任务列表、版本进度、待办事项 |
 | `casalyin-server/ISSUES.md` | 已知 Bug 与问题清单 |
 | `casalyin-server/PENDING_DISCUSSIONS.md` | 待确认的业务问题 |
@@ -90,7 +83,7 @@ casalyin/
 |------|------|
 | `docs/testing/test-strategy.md` | Playwright 规范、测试账号、文件结构、断言规范、测试优先级 |
 | `docs/testing/test-cases.md` | 完整测试用例清单（十一期 800+ 行，覆盖状态机/权限/VIP/UI 规范） |
-| `test-cases.md` | 早期测试用例汇总（部分与 docs/testing/test-cases.md 重复，以 docs/ 为准） |
+| `docs/testing/BUSINESS-FLOW-ANALYSIS.md` | 业务流程分析 |
 
 ### 架构决策
 
@@ -111,7 +104,7 @@ casalyin/
 | 文件 | 内容 |
 |------|------|
 | `.plans/casalyin/docs/index.md` | 知识库索引（新增页面查此入口） |
-| `EDITOR_REFACTOR_PLAN.md` | Editor 规范统一四期计划（农艺师✅/店铺进行中/收尾待办） |
+| `.plans/casalyin/task_plan.md` | 主计划与遗留需求 |
 
 ---
 
@@ -147,63 +140,38 @@ POST   /{resource}/offline/{id}    # 下架（POST，禁止 PUT）
 
 ---
 
-## 版本发布协议
+## Git 提交与发布
 
-**用户不手动 push。所有 push 由 Hermes 执行，流程如下：**
+**当前阶段：直接在 `main` 分支开发并 push（主仓库 casalyin-ALL 为 `master`）。**
 
+- push 后 CI/CD 自动部署到生产环境；生产未对外开放，无影响面
+- 不使用 develop / feature / hotfix 分支（单人开发，双分支流程是过度设计）
+- 仓库当前无 tag；不做版本封板
+
+**Commit message 格式：** `feat: {简短描述}` / `fix: {简短描述}` / `chore: {简短描述}`
+
+### 子模块提交顺序（重要）
+
+三个业务仓库是 git submodule。改动涉及子模块时必须先提交子模块，再提交主仓库指针，否则主仓库指针会指向不含改动的 commit：
+
+```bash
+# 1. 先在子模块内提交并 push
+cd casalyin-java && git add <files> && git commit -m "fix: ..." && git push origin main
+
+# 2. 再回主仓库提交指针
+cd .. && git add casalyin-java && git commit -m "chore: bump submodule" && git push origin master
 ```
-功能完成 → reviewer [OK] + E2E 通过
-    ↓
-team-lead 向用户汇总本版本内容，请求确认
-    ↓
-用户确认
-    ↓
-team-lead 执行：git add → git commit（不要 push）
-    ↓
-更新任务状态为 DONE（如果是通过 .hermes-tasks/ 交接的任务）
-    ↓
-Hermes 验证 → git push origin develop → 本地测试
-    ↓
-测试通过 → Hermes merge develop 到 main → ECS 自动部署
-```
 
-**重要**：
-- team-lead 只负责 commit，不要 push
-- push 统一由 Hermes 在验证通过后执行
-- 如果不是通过 .hermes-tasks/ 交接的任务，完成后告诉用户，由用户决定是否 push
-- **新规则**：所有开发在 develop 分支进行，测试通过后才 merge 到 main
-- **main 分支 = 生产环境**，任何 push 到 main 都会触发自动部署
+`git status` 中子模块显示 `Mm` 表示指针已变**且**内部还有未提交内容 —— 此时不要直接提交主仓库。
 
-**Commit message 格式：** `feat: v{版本号} {简短描述}`
-例：`feat: v1.3 brand dashboard + product list`
-
-## Git 分支管理
-
-**当前稳定版本：v1.0.0-stable**
-
-### 分支策略
-
-- **main**：生产环境分支，只接受来自 develop 的 merge，每次 push 自动部署
-- **develop**：开发主分支，日常开发在此进行
-- **feature/xxx**：功能开发分支，从 develop 创建，完成后 merge 回 develop
-- **hotfix/xxx**：紧急修复分支，从 main 创建，修复后 merge 回 main 和 develop
-
-### 工作流程
-
-1. **日常开发**：在 develop 分支或 feature 分支开发
-2. **功能完成**：merge 到 develop，运行 E2E 测试
-3. **准备发版**：develop 稳定后 merge 到 main，打 tag
-4. **生产部署**：push main 分支，自动触发部署
-
-**详细规范见：** `docs/git-workflow.md`
+> 等生产正式对外开放后，再引入 develop 分支与发版评审流程。历史流程记录见 `docs/git-workflow.md`（内容已过时，仅供参考）。
 
 ---
 
 ## 本地开发环境操作
 
-**所有本地服务的启动、重启、调试均由 Claude CLI Team 在本地执行，Hermes 不参与本地服务操作。**
-
 **完整启动指南：** `docs/development/startup-guide.md`
+**启动故障排查：** `docs/development/local-startup-troubleshooting.md`
 
 ### 服务启动命令（标准）
 
@@ -218,11 +186,11 @@ Hermes 验证 → git push origin develop → 本地测试
 ### 重启服务
 
 ```bash
-# 后端重启（停止 + 重新启动）
+# 后端重启（dev:stop 内部是 lsof -ti :8690 | xargs kill -9）
 cd casalyin-java && npm run dev:stop && npm run dev
 
 # 前端重启（先停止占用端口的进程）
-netstat -ano | grep :5173 | awk '{print $5}' | xargs taskkill //PID //F
+lsof -ti :5173 | xargs kill -9 2>/dev/null || true
 cd casalyin-server && npm run dev
 ```
 
@@ -236,11 +204,15 @@ rm -rf casalyin-admin/target    # 删除编译缓存
 npm run dev                      # 重新编译并启动
 ```
 
+> Maven 会跳过未变更的模块并输出 `Nothing to compile - all classes are up to date`，
+> 此时并未真正验证改动，必须删 target 后重编。
+
 ### 后端约束
 
-- JDK 17 必须在 `C:\Program Files\Eclipse Adoptium\jdk-17.0.17.10-hotspot`，脚本写死此路径
+- 开发机为 macOS (Apple Silicon)，JDK 17 由 Homebrew 安装（`brew install openjdk@17`）
+- `scripts/dev-admin.sh` 自动检测 `JAVA_HOME`（依次尝试 `/opt/homebrew` 与 `/usr/local` 下的 `openjdk@17`），无需手动配置
+- 后端使用 Maven Wrapper（mac 用 `./mvnw`，`mvnw.cmd` 是 Windows 那份），无需安装 Maven
 - 启动后 ADMIN 需重新登录刷新权限缓存（Flyway 变更后必须）
-- 后端使用 Maven Wrapper (`mvnw.cmd`)，无需安装 Maven
 
 ### Redis 缓存问题
 
@@ -264,53 +236,9 @@ redis-cli -n 1 flushdb
 
 ---
 
-## 多智能体模式
+## Known Pitfalls（踩过的坑，必读）
 
-### 团队命名与上下文恢复
-
-**团队名格式：`casalyin-YYYYMMDD`**（例：`casalyin-20260414`）
-
-当前团队名存储在 `.plans/casalyin/current-team.txt`。
-
-**每次 session 启动（含上下文重置后）必须执行：**
-1. 读 `.plans/casalyin/current-team.txt` 拿到当前团队名
-2. 尝试 `SendMessage` 唤醒已有 agent，**不要直接 spawn 新的**
-3. 若 agent 无响应（已退出），再在同一团队名下 spawn 新 agent
-4. 跨天时用新日期建新团队，并更新 `current-team.txt`
-
-**禁止在没有检查 `current-team.txt` 的情况下直接 spawn agent** → 这是产生重复 agent 的根本原因。
-
-### 团队成员
-
-| 名称 | 角色 | 核心能力 |
-|------|------|---------|
-| frontend-dev | 前端开发 | React + TypeScript + Ant Design，遵循 XxxEditor 架构 |
-| backend-dev | 后端开发 | Spring Boot + Sa-Token + MyBatis Plus + Flyway |
-| e2e-tester | 联调测试 | Playwright 测试，每次代码变更后必须运行验证 |
-| reviewer | 代码审查 | 只读审查，安全/质量/项目规范检查 |
-
-### 规划文件位置
-
-```
-.plans/casalyin/
-  task_plan.md          ← 主计划
-  progress.md           ← 工作日志
-  decisions.md          ← 架构决策
-  current-team.txt      ← 当前团队名（session 恢复入口）
-```
-
-### 核心协议
-
-| 协议 | 规则 |
-|------|------|
-| 每次代码变更 | e2e-tester 必须运行相关测试脚本确认功能正常 |
-| 功能完成 | frontend-dev / backend-dev 完成后找 reviewer 审查 |
-| 决策点 | 上报 team-lead，由 team-lead 咨询用户后决定 |
-| Bug 3 次无法修复 | 上报 team-lead |
-| 上下文恢复 | 读 `current-team.txt` → SendMessage 唤醒 → 读 `task_plan.md` 恢复进度 |
-| 测试执行 | **只有 e2e-tester 跑测试**，team-lead 不直接执行测试；需要用户操作时由 team-lead 告知用户 |
-
-### Known Pitfalls
+### 后台（casalyin-server / casalyin-java）
 
 - Ant Design Modal/message 静态方法在 `ConfigProvider` 下无任何响应（无报错极难排查）→ 统一从 `AppProvider` 导入
 - 路由路径若含 `/admin/` 同时标注 `@NoNeedLogin` 会完全绕过鉴权 → 禁止
@@ -318,85 +246,37 @@ redis-cli -n 1 flushdb
 - 草稿 PENDING 状态下后端必须拦截所有写操作（不依赖前端只读 UI）
 - BASE 角色权限码须覆盖所有业务维度的草稿读写操作（`product/store/agronomist` 的 draft:create/update/query/submit 等），漏加会导致前端静默失败
 - **Flyway 迁移文件一旦执行过，绝对不能修改内容**（会导致 checksum 不一致，Spring 容器初始化中断）→ 需要修改表结构必须新建 Vn+1 文件；开发环境紧急修复可 `UPDATE flyway_schema_history SET checksum = <新checksum> WHERE version = 'n'`
+- **更新实体禁止用 `SmartBeanUtil.copy` 整体覆盖**：前端未传的字段会被写成 null，导致编辑时其他字段被清空 → 在已查出的实体上按字段合并，只覆盖非 null 字段
+- 前端 payload 用 `values.x || undefined` 会让"主动清空"和"未修改"无法区分 → 需要支持清空的字段传 `null`，未修改才传 `undefined`
 
-### E2E 测试排查规范（四步顺序）
-
-测试失败时 e2e-tester **必须按此顺序**排查，不得跳步：
-
-0. **先检查环境**（最优先，排查前置条件）：
-   - 前端服务是否正常（Vite 有无编译错误 overlay、是否存在浏览器/Vite 缓存问题）
-   - 后端服务是否已启动并完成初始化（Flyway、缓存预热等）
-   - 权限/会话是否是全新状态（browserContext 是否已隔离、是否需要重新登录刷新缓存）
-   - **环境问题优先于代码问题上报，避免误判**
-1. **页面是否符合预期**（有无跳转、列表有无更新）
-2. **页面上有无弹窗/toast**（成功或失败都应有提示；静默失败本身是 Bug，需单独上报）
-3. **最后才看 API response**（`waitForResponse` + `console.log` 抓 status 和 body）
-
----
-
-## casalyin-headless 团队运营手册
-
-> C 端前台团队（casalyin-Headless/）。由 CCteam-creator-cn 于 2026-04-19 生成。
-
-### Team-Lead 控制平面
-
-- team-lead = 主对话，不是生成的 agent
-- **禁用独立子智能体**：团队存在后，所有工作通过 SendMessage 交给队友
-
-### 团队花名册
-
-| 名称 | 角色 | 模型 | 核心能力 |
-|------|------|------|---------|
-| frontend-dev | 前端开发 | sonnet | Next.js 14 + TypeScript + Tailwind，Server Components，响应式 |
-| e2e-tester | 联调测试 | sonnet | Playwright 测试 + 浏览器自动化 |
-| reviewer | 代码审查 | sonnet | 安全/质量/性能/规范审查（只读） |
-
-### 团队名称与恢复
-
-**团队名格式：`casalyin-headless-YYYYMMDD`**（例：`casalyin-headless-20260419`）
-
-当前团队名存储在 `.plans/casalyin-headless/current-team.txt`。
-
-**每次 session 启动必须执行：**
-1. 读 `.plans/casalyin-headless/current-team.txt` 拿到当前团队名
-2. 尝试 `SendMessage` 唤醒已有 agent，**不要直接 spawn 新的**
-3. 若 agent 无响应（已退出），再在同一团队名下 spawn 新 agent
-
-### 规划文件位置
-
-```
-.plans/casalyin-headless/
-  task_plan.md          ← 主计划
-  progress.md           ← 工作日志
-  decisions.md          ← 架构决策
-  current-team.txt      ← 当前团队名（session 恢复入口）
-  docs/                 ← 知识库（architecture, api-contracts, invariants, index）
-  frontend-dev/         ← 前端开发工作目录
-  e2e-tester/           ← 测试工作目录
-  reviewer/             ← 审查工作目录
-```
-
-### 通信速查
-
-| 操作 | 命令 |
-|------|------|
-| 给前端分配任务 | `SendMessage(to: "frontend-dev", message: "...")` |
-| 给测试分配任务 | `SendMessage(to: "e2e-tester", message: "...")` |
-| dev 请求代码审查 | frontend-dev 直接联系 reviewer（不经过 team-lead） |
-
-### 审查维度
-
-| # | 维度 | 权重 | STRONG 表现 | WEAK 表现 |
-|---|------|------|------------|---------|
-| RD-1 | 响应式/移动端适配 | 高 | 375px 无横向溢出，触控目标 ≥44px，所有功能可用 | 移动端溢出/截断，按钮太小无法点击 |
-| RD-2 | SEO & 性能 | 高 | Server Components / SSG，图片有 alt，LCP<2.5s | 全客户端渲染，无 alt 属性，首屏白屏 |
-| RD-3 | 业务规范一致性 | 中 | API 字段名与 api-contracts.md 一致，遵循 kebab-case 路径规范 | 自己猜测字段名，路径命名不规范 |
-
-### headless 团队 Known Pitfalls
+### C 端前台（casalyin-Headless）
 
 - Next.js App Router 中，Server Component 不能直接使用 useState/useEffect → 需拆分为 Client Component
 - 环境变量在 Server Component 中用 `process.env.XXX`，在 Client Component 中必须以 `NEXT_PUBLIC_` 前缀暴露
 - API 调用失败时 Next.js Server Component 会直接报错（不是 JSON 错误），需加 try/catch
+
+### C 端质量红线
+
+| 维度 | 要求 |
+|------|------|
+| 响应式 | 375px 无横向溢出，触控目标 ≥44px，所有功能可用 |
+| SEO & 性能 | 优先 Server Components / SSG，图片必须有 alt，LCP < 2.5s |
+| 接口一致性 | 字段名与 `.plans/casalyin-headless/docs/api-contracts.md` 一致，路径遵循 kebab-case |
+
+---
+
+## 调试排查顺序（四步，不得跳步）
+
+功能异常或测试失败时按此顺序排查：
+
+0. **先检查环境**（最优先）：
+   - 前端服务是否正常（Vite 有无编译错误 overlay、是否存在浏览器/Vite 缓存问题）
+   - 后端服务是否已启动并完成初始化（Flyway、缓存预热等）
+   - 权限/会话是否是全新状态（是否需要重新登录刷新缓存）
+   - **环境问题优先于代码问题排查，避免误判**
+1. **页面是否符合预期**（有无跳转、列表有无更新）
+2. **页面上有无弹窗/toast**（成功或失败都应有提示；静默失败本身就是 Bug）
+3. **最后才看 API response**（`waitForResponse` + `console.log` 抓 status 和 body）
 
 ---
 
